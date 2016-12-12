@@ -1,0 +1,154 @@
+Created a plugin supporting dropdown_direction in order to make it easy to re-use the solution.
+
+The plugin doesn't contain the styling changes so you might find some slight hick-ups. Check the styling changes related to this pull request for details on how to solve it.
+
+
+
+Selectize.define('dropdown_direction', function(options) {
+    var self = this;
+
+    /**
+     * Calculates and applies the appropriate position of the dropdown.
+     * 
+     * Supports dropdownDirection up, down and auto. In case menu can't be fitted it's
+     * height is limited to don't fall out of display.
+     */
+    this.positionDropdown = (function() {
+        return function() {
+            var $control = this.$control;
+            var $dropdown = this.$dropdown;
+            var p = getPositions();
+
+            // direction
+            var direction = getDropdownDirection(p);
+            if (direction === 'up') {
+                $dropdown.addClass('direction-up').removeClass('direction-down');
+            } else {
+                $dropdown.addClass('direction-down').removeClass('direction-up');
+            }
+            $control.attr('data-dropdown-direction', direction);
+
+            // position
+            var isParentBody = this.settings.dropdownParent === 'body';
+            var offset = isParentBody ? $control.offset() : $control.position();
+            var fittedHeight;
+
+            switch (direction) {
+                case 'up':
+                    offset.top -= p.dropdown.height;
+                    if (p.dropdown.height > p.control.above) {
+                        fittedHeight = p.control.above - 15;
+                    }
+                    break;
+
+                case 'down':
+                    offset.top += p.control.height;
+                    if (p.dropdown.height > p.control.below) {
+                        fittedHeight = p.control.below - 15;
+                    }
+                    break;
+            }
+
+            if (fittedHeight) {
+                this.$dropdown_content.css({ 'max-height' : fittedHeight });
+            }
+
+            this.$dropdown.css({
+                width : $control.outerWidth(),
+                top   : offset.top,
+                left  : offset.left
+            });             
+        };
+    })();
+
+    /**
+     * Gets direction to display dropdown in. Either up or down.
+     */
+    function getDropdownDirection(positions) {
+        var direction = self.settings.dropdownDirection;
+
+        if (direction === 'auto') {
+            // down if dropdown fits
+            if (positions.control.below > positions.dropdown.height) {
+                direction = 'down';
+            }
+            // otherwise direction with most space
+            else {
+                direction = (positions.control.above > positions.control.below) ? 'up' : 'down';
+            }
+        }
+
+        return direction;
+    }
+
+    /**
+     * Get position information for the control and dropdown element.
+     */
+    function getPositions() {
+        var $control = self.$control;
+        var $window = $(window);
+
+        var control_height = $control.outerHeight(false);
+        var control_above = $control.offset().top - $window.scrollTop();
+        var control_below = $window.height() - control_above - control_height;
+
+        var dropdown_height = self.$dropdown.outerHeight(false);
+
+        return {
+            control : {
+                height : control_height,
+                above : control_above,
+                below : control_below
+            },
+            dropdown : {
+                height : dropdown_height
+            }
+        };
+    } 
+});
+
+
+@streamside Thanks for the li'l plugin--works great--but there seems to be a bit of an issue when removing a selection. Because positionDropdown is called prior to refreshOptions during deleteSelection, the dropdown list does not contain the item that will be re-added to the dropdown list when positionDropdown is called, so the dropdown list does not get positioned correctly.
+
+As a bit of a hacky solution, I had to override deleteSelection and forced another positionDropdown in order for it to position correctly:
+
+    this.deleteSelection = (function() {
+        var original = self.deleteSelection;
+        return function() {
+            var deleted = original.apply(this, arguments);
+            if (deleted) {
+                // Force another re-position after options have refreshed
+                self.positionDropdown();
+            }
+            return deleted;
+        };
+    })();
+EDIT: Scratch overriding deleteSelection; seems like that's not sufficient, as there are other cases where the dropdown list is updated, and not re-positioned. So took the hack one step further, and called positionDropdown whenever refreshOptions occurs :/.
+
+    /**
+     * Force a re-position when dropdown list is updated
+     */
+    this.refreshOptions = (function() {
+        var original = self.refreshOptions;
+        return function() {
+            original.apply(this, arguments);
+            self.positionDropdown();
+        };
+    })();
+
+
+Thanks a lot for this @streamside
+
+The plugin should use its own options.direction, not selectize settings.dropdownDirection
+It should also default direction to 'auto' like the original PR.
+Code below also falls back to old settings.dropdownDirection if options.direction not set.
+
+Add just after var self = this
+
+    options = $.extend({
+        direction: self.settings.dropdownDirection || 'auto'
+    }, options);
+And at the start of getDropdownDirection(positions) {
+
+        //var direction = self.settings.dropdownDirection;
+        var direction = options.direction;
