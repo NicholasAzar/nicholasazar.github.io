@@ -69899,7 +69899,8 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 
 var _cloneDeep = __webpack_require__(78);
 var MultiSelectExampleComponent = (function () {
-    function MultiSelectExampleComponent() {
+    function MultiSelectExampleComponent(cdr) {
+        this.cdr = cdr;
         this.options = _cloneDeep(__WEBPACK_IMPORTED_MODULE_2__selectize_configs__["b" /* ExampleValues_Frameworks */]);
         this.config = __WEBPACK_IMPORTED_MODULE_1__multiSelectExample_config__["a" /* MULTI_SELECT_CONFIG */];
         this.placeholder = 'Placeholder...';
@@ -69911,6 +69912,7 @@ var MultiSelectExampleComponent = (function () {
             value: Math.random().toString(),
             code: Math.random().toString()
         });
+        this.cdr.detectChanges();
     };
     MultiSelectExampleComponent.prototype.onValueChange = function ($event) {
         console.log("Multi select option changed: ", $event);
@@ -69920,9 +69922,10 @@ var MultiSelectExampleComponent = (function () {
             selector: 'multi-select-example',
             template: __webpack_require__(669)
         }), 
-        __metadata('design:paramtypes', [])
+        __metadata('design:paramtypes', [(typeof (_a = typeof __WEBPACK_IMPORTED_MODULE_0__angular_core__["i" /* ChangeDetectorRef */] !== 'undefined' && __WEBPACK_IMPORTED_MODULE_0__angular_core__["i" /* ChangeDetectorRef */]) === 'function' && _a) || Object])
     ], MultiSelectExampleComponent);
     return MultiSelectExampleComponent;
+    var _a;
 }());
 
 
